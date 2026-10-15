@@ -21,3 +21,40 @@ def test_generate_returns_model_response(mock_post):
     assert result == "AI MINIONS ONLINE"
     mock_post.assert_called_once()
     mock_response.raise_for_status.assert_called_once()
+
+from fastapi.testclient import TestClient
+
+from backend.app.main import app
+
+
+def test_health_endpoint():
+    client = TestClient(app)
+
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "healthy",
+        "app": "AI Minions",
+        "version": "0.1.0"
+    }
+
+
+@patch("backend.app.main.requests.get")
+def test_ollama_health_endpoint(mock_get):
+    mock_response = Mock()
+    mock_response.json.return_value = {
+        "models": [
+            {"name": "qwen3.5:4b"}
+        ]
+    }
+    mock_response.raise_for_status.return_value = None
+    mock_get.return_value = mock_response
+
+    client = TestClient(app)
+    response = client.get("/health/ollama")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
+    assert response.json()["models_available"] == 1
+    mock_get.assert_called_once()
