@@ -7,6 +7,8 @@ from unittest.mock import Mock
 
 from backend.app.bots.factory import MinionFactory
 
+from backend.app.bots.default_profiles import get_default_profiles
+
 
 @pytest.fixture
 def profile():
@@ -68,3 +70,25 @@ def test_factory_rejects_unknown_minion_id():
 
     with pytest.raises(KeyError, match="Minion not found"):
         factory.create("unknown-minion")
+
+
+def test_default_profiles_have_unique_ids():
+    profiles = get_default_profiles()
+
+    profile_ids = [profile.bot_id for profile in profiles]
+
+    assert profile_ids == ["backend", "frontend", "testing"]
+    assert len(profile_ids) == len(set(profile_ids))
+
+
+def test_default_profiles_have_separate_workspaces():
+    profiles = get_default_profiles()
+
+    workspaces = [profile.workspace for profile in profiles]
+
+    assert workspaces == [
+        "projects/backend",
+        "projects/frontend",
+        "projects/testing",
+    ]
+    assert all(profile.allowed_tools == () for profile in profiles)
