@@ -1,7 +1,10 @@
-
+import requests
 from unittest.mock import Mock, patch
 
+from fastapi.testclient import TestClient
+
 from backend.app.engine.model_client import ModelClient
+from backend.app.main import app
 
 
 @patch("backend.app.engine.model_client.requests.post")
@@ -22,10 +25,6 @@ def test_generate_returns_model_response(mock_post):
     mock_post.assert_called_once()
     mock_response.raise_for_status.assert_called_once()
 
-from fastapi.testclient import TestClient
-
-from backend.app.main import app
-
 
 def test_health_endpoint():
     client = TestClient(app)
@@ -36,7 +35,7 @@ def test_health_endpoint():
     assert response.json() == {
         "status": "healthy",
         "app": "AI Minions",
-        "version": "0.1.0"
+        "version": "0.1.0",
     }
 
 
@@ -58,3 +57,16 @@ def test_ollama_health_endpoint(mock_get):
     assert response.json()["status"] == "healthy"
     assert response.json()["models_available"] == 1
     mock_get.assert_called_once()
+
+@patch("backend.app.main.requests.get")
+def test_ollama_health_endpoint_when_unavailable(mock_get):
+    mock_get.side_effect = requests.ConnectionError(
+        "Ollama server is unavailable"
+    )
+
+    client = TestClient(app)
+    response = client.get("/health/ollama")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "unavailable"
+    assert response.json()["models_available"] == 0
