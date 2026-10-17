@@ -3,6 +3,10 @@ import pytest
 from backend.app.bots.bot_profile import BotProfile
 from backend.app.bots.registry import MinionRegistry
 
+from unittest.mock import Mock
+
+from backend.app.bots.factory import MinionFactory
+
 
 @pytest.fixture
 def profile():
@@ -45,3 +49,22 @@ def test_missing_profile_raises_key_error():
 
     with pytest.raises(KeyError, match="Minion not found"):
         registry.get("unknown-minion")
+
+
+def test_factory_creates_minion_with_registered_profile(profile):
+    registry = MinionRegistry()
+    registry.register(profile)
+    model_client = Mock()
+
+    factory = MinionFactory(registry, model_client)
+    minion = factory.create("backend-01")
+
+    assert minion.profile == profile
+    assert minion.model_client is model_client
+
+
+def test_factory_rejects_unknown_minion_id():
+    factory = MinionFactory(MinionRegistry())
+
+    with pytest.raises(KeyError, match="Minion not found"):
+        factory.create("unknown-minion")
