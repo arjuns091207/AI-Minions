@@ -11,6 +11,10 @@ from backend.app.bots.default_profiles import get_default_profiles
 
 from backend.app.bots.bootstrap import create_default_registry
 
+from unittest.mock import Mock, patch
+
+from backend.app.bots.task_service import MinionTaskService
+
 @pytest.fixture
 def profile():
     return BotProfile(
@@ -104,3 +108,32 @@ def test_default_registry_registers_all_specialists():
     assert registry.get("backend").name == "Backend Minion"
     assert registry.get("frontend").name == "Frontend Minion"
     assert registry.get("testing").name == "Testing Minion"
+
+def test_task_service_executes_task_with_selected_minion():
+    with patch(
+        "backend.app.bots.task_service.MinionFactory"
+    ) as factory_class:
+        model_client = Mock()
+        factory = factory_class.return_value
+        factory.model_client = model_client
+
+        service = MinionTaskService()
+        factory.create.return_value.execute.return_value = "Task completed."
+
+        result = service.assign_task(
+            "backend",
+            "Create a health endpoint",
+        )
+
+        factory.create.assert_called_once_with("backend")
+        factory.create.return_value.execute.assert_called_once_with(
+            "Create a health endpoint"
+        )
+        assert result == "Task completed."
+
+
+def test_task_service_propagates_unknown_minion_error():
+    service = MinionTaskService()
+
+    with pytest.raises(KeyError, match="Minion not found"):
+        service.assign_task("unknown-minion", "Run a task")
