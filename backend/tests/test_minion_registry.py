@@ -9,6 +9,7 @@ from backend.app.bots.factory import MinionFactory
 
 from backend.app.bots.default_profiles import get_default_profiles
 
+from backend.app.bots.bootstrap import create_default_registry
 
 @pytest.fixture
 def profile():
@@ -92,3 +93,14 @@ def test_default_profiles_have_separate_workspaces():
         "projects/testing",
     ]
     assert all(profile.allowed_tools == () for profile in profiles)
+
+def test_default_registry_registers_all_specialists():
+    registry = create_default_registry()
+
+    assert [
+        profile.bot_id for profile in registry.list_profiles()
+    ] == ["backend", "frontend", "testing"]
+
+    assert registry.get("backend").name == "Backend Minion"
+    assert registry.get("frontend").name == "Frontend Minion"
+    assert registry.get("testing").name == "Testing Minion"
